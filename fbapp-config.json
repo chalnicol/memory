@@ -1,0 +1,9 @@
+{
+    "instant_games": {
+      "bot": {
+        "subscription_type": "OPT_IN_PUBLIC",
+      },
+      "orientation": "PORTRAIT",
+      "navigation_menu_version": "NAV_FLOATING"
+    }
+  }

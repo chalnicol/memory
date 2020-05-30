@@ -1,0 +1,22 @@
+{
+  "name": "memory_fb",
+  "version": "1.0.0",
+  "description": "Phaser Facebook Instant Games",
+  "main": "src/main.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "start": "http-server --ssl -c-1 -p 8080 -a 127.0.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "author": "Charlou E. Nicolas",
+  "license": "",
+  "homepage": "",
+  "dependencies": {
+    "http-server": "^0.11.1"
+  }
+}

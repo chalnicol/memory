@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Memory Tiles Game</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, user-scalable=no, minimal-ui">
+        <meta name="apple-mobile-web-app-capable" content="yes"/>
+        <meta name="full-screen" content="yes"/>
+        <meta name="screen-orientation" content="portrait"/>
+        
+        <script src="https://connect.facebook.net/en_US/fbinstant.6.3.js"></script>
+
+        <script src="lib/phaser.min.js"></script>
+
+        <script src="lib/phaser-facebook-instant-games.js"></script>
+
+        <script src="src/main.js"></script>
+        
+        <link href="https://fonts.googleapis.com/css2?family=Coda:wght@800&family=Oswald:wght@700&display=swap" rel="stylesheet">
+
+        <style type="text/css">
+
+            * {
+                padding: 0;
+                margin: 0;
+            }
+            canvas {
+               /*  touch-action: none; */
+                touch-action: none;
+                -ms-touch-action: none;
+            }
+            #game_div {
+                width: 100%;
+                max-width: 420px;
+            }
+        </style>
+
+    </head>
+    <body>
+        <div id="game_div"></div>
+    </body>
+</html>
