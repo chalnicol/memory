@@ -10,7 +10,7 @@ window.onload = function () {
 
         //console.log ( _gW, _gH, _scale );
 
-        let _bestScores = [ 0, 0, 0 ];
+        let _bestScores = { moves: [], time : [] };
 
         class Preloader extends Phaser.Scene {
 
@@ -91,10 +91,21 @@ window.onload = function () {
             }
             create () 
             {
+                
+                this.lvlCount = 3;
+
+                for ( let i=0; i<this.lvlCount; i++) {
+                    _bestScores.moves.push (0);
+                    _bestScores.time.push (0);
+                }
+
                 this.initHomeSound ();
+
                 this.initHomeInterface ();
 
-                this.getScores ();
+                this.initTable ();
+                
+                this.initScores ();
 
             }
             initHomeSound () {
@@ -109,9 +120,9 @@ window.onload = function () {
 
                 //set graphics..
 
-                const bg = this.add.image (_gW/2, _gH/2, 'bg').setScale (_gW/720);
+                let bg = this.add.image (_gW/2, _gH/2, 'bg').setScale (_gW/720);
 
-                const title = this.add.image (_gW/2, _gH/2 -_gH/2, 'title').setScale (_gW/720);
+                let title = this.add.image (_gW/2, _gH/2 -_gH/2, 'title').setScale (_gW/720);
 
                 this.tweens.add ({
                     targets : title,
@@ -121,7 +132,7 @@ window.onload = function () {
                     ease : 'Elastic'
                 });
 
-                const click = this.add.image (_gW/2, _gH/2, 'click').setScale (_gW/720);
+                let click = this.add.image (_gW/2, _gH/2, 'click').setScale (_gW/720);
 
 
                 //set player details..
@@ -135,72 +146,122 @@ window.onload = function () {
                 this.add.image ( _gW/2, ry, 'dude').setDisplaySize( rz, rz);
 
 
-                //set table..
-
-                const table = this.add.image (_gW/2, _gH/2, 'table').setScale (_gW/720);
-
-                let gp = _gW * 0.27,
-                    sX = _gW * 0.23,
-                    sY = _gH * 0.775;
-
-                this.scoresTxt = [];
-
-                for ( let i = 0; i < _bestScores.length ; i++ ) {
-
-                    let txt = this.add.text ( sX + i* gp, sY, '00', { color : '#333', fontSize : _gH * 0.07, fontFamily : 'Coda'  } ).setOrigin (0.5);
-
-                    this.scoresTxt.push ( txt );
-
-                }
-
-                let rect = this.add.rectangle ( _gW/2, _gH/2, _gW, _gH ).setInteractive ();
+                let rect = this.add.rectangle ( _gW/2, 448 * _scale, 550 * _scale, 90 * _scale );
             
                 rect.once ('pointerdown', function () {
                     
-                    //this.removeInteractive();
-
                     this.scene.music.play('clicka');
 
                     this.scene.initGame ();
-                
+            
                 });
+
+                this.time.delayedCall ( 1000, function () {
+                    rect.setInteractive();
+                },[], this );
 
 
             }
-            getScores () {
+            initTable () {
 
+                //set table..
+                this.tableContainer = this.add.container ( 0, 550 * _scale );
+
+                const table = this.add.image (_gW/2, _gH/2, 'table').setScale (_gW/720);
+
+                this.tableContainer.add ( table );
+
+                this.stats = {
+                    time : [],
+                    moves : []
+                }
+          
+                let itemW = 568 * _scale,
+                    itemH = 80 * _scale,
+                    itemX = 74 * _scale,
+                    itemY = 870 * _scale;
+
+                let txtConfiga = { color : '#333', fontSize : itemH * 0.5, fontFamily : 'Oswald'  };
+
+                for ( let i = 0; i < this.lvlCount ; i++ ) {
+
+                    let miniCont = this.add.container ( itemX, itemY + i * ( itemH ) ).setName ('item' + i );
+
+                    let bgRect = this.add.rectangle ( 0, 0, itemW, itemH, 0xffffff, 0.1 ).setOrigin (0);
+
+                    let lvl = this.add.text ( itemW * 0.11, itemH/2, (i+1) < 10 ? '0' + (i+1) : i+1, txtConfiga  ).setOrigin (0.5);
+
+                    let timetxt = this.add.text ( itemW * 0.64 , itemH/2, '000:00:00', txtConfiga  ).setName ('time' + i ).setOrigin (1,0.5);
+
+                    let movestxt = this.add.text ( itemW * 0.88, itemH/2, '9999', txtConfiga  ).setName ('moves' + i ).setOrigin (0.5);
+
+                    miniCont.add ([bgRect, lvl, timetxt, movestxt]);
+
+                    this.stats.time.push ( timetxt );
+
+                    this.stats.moves.push ( movestxt );
+                    
+                    this.tableContainer.add (miniCont);
+                }
+
+
+            }
+            initScores () {
+
+                this.facebook.getData([ 'bestScores', 'bestTime']);
+
+                this.facebook.once('getdata', function (data) {
+
+                    this.updateStats (data);
+
+                    this.tweens.add ({
+                        targets : this.tableContainer,
+                        y : 0,
+                        duration : 300,
+                        ease : 'Power2',
+                        delay : 300
+                    });
+
+                }, this);
+
+                this.facebook.once ('getdatafail', function ( error ) {
+
+                    console.log ('error saving data : homescreen');
+
+                });
+
+            }
+            updateStats ( data ) {
+
+                if ( data.hasOwnProperty ('bestScores') ) {
+
+                    let movesArr = data.bestScores.split(',');
+
+                    for ( var i=0; i< movesArr.length; i++) {
+        
+                        let num = parseInt ( movesArr[i] );
+    
+                        this.stats.moves [i].setText ( num < 10 ? '0' + num : num );
+                    }
+
+                    _bestScores.moves = movesArr;
+            
+                }
+
+                if ( data.hasOwnProperty ('bestTime') ) {
+
+                    let timeArr = data.bestTime.split(',');
+
+                    for ( var i=0; i<timeArr.length; i++) {
+        
+                        this.stats.moves [i].setText ( timeArr[i]);
+                    }
+
+                    _bestScores.time = timeArr;
+            
+                }
 
                
-
-                this.facebook.on('savestats', function (data) {
-
-                    //  Handle what the game should do after the stats have saved
-                
-                });
-                
-                this.facebook.on('savestatsfail', function (error) {
-                
-                    //  Handle what the game should do if the stats fail to save
-                
-                });
-
-                this.facebook.on('savedata', function (data) {
-
-                    //  Handle what the game should do when the data saves
-                    console.log ('save data successful..');
-                });
-                
-                this.facebook.on('savedatafail', function (error) {
-                
-                    //  Handle what the game should do if the data fails to save
-                    console.log ('error saving data..');
-                });
-
-
-                this.facebook.getData('plyrScore');
-                
-
-
 
             }
             initGame () {
@@ -212,6 +273,7 @@ window.onload = function () {
                 }, [], this);
                 
             }
+
         }
 
         class GameScreen extends Phaser.Scene {
@@ -401,7 +463,7 @@ window.onload = function () {
                         
                         const img = this.add.image (0,0, 'thumbs', 0 ).setScale (tileW/70 * 0.75).setVisible(true);
 
-                        //counter + 1
+                        //frames [counter] + 1
 
                         const txt = this.add.text ( tileW * 0.35, -tileW * 0.4, counter + 1, {fontSize:tileW*0.2, fontFamily:'Oswald', color:'#fff' }  ).setOrigin (1, 0);
                         txt.setShadow (0,2,'#f00', 2, false, true);
@@ -727,12 +789,39 @@ window.onload = function () {
             }
             registerScore () {
 
-                
-                let currentBest = _bestScores [ this.gmLvl - 1];
+                //bestScores & bestTime..
+
+                let currentBest = parseInt ( _bestScores.moves [ this.gmLvl - 1 ] );
 
                 if ( currentBest == 0 || this.moves < currentBest ) {
-                    _bestScores [this.gmLvl - 1] = this.moves;
+
+                    _bestScores.moves [this.gmLvl - 1] = this.moves;
+
+                    this.facebook.data.set ('bestScores', _bestScores.moves.toString() );
+
                 }
+
+                let currentBestTime = parseInt ( _bestScores.time [ this.gmLvl - 1 ] );
+
+                if ( currentBestTime == 0 || this.totalSeconds < currentBestTime ) {
+
+                    _bestScores.time [this.gmLvl - 1] = this.totalSeconds;
+
+                    this.facebook.data.set ('bestTime', _bestScores.time.toString() );
+
+                }
+               
+                this.facebook.on('savedata', function (data) {
+
+                    console.log ('save data successful : gamescreen', data );
+                
+                });
+                
+                this.facebook.on('savedatafail', function (error) {
+                
+                    console.log ('error saving data : gamescreen');
+                });
+
 
             }
             showPrompt ( end = false ) {
@@ -829,11 +918,10 @@ window.onload = function () {
 
                 this.promptScreen.add (img);
 
-                const configtxt = {
+                let configtxt = {
                     color : '#dedede',
                     fontFamily : 'Coda',
-                    //fontStyle : 'bold',
-                    fontSize : _gH * 0.07
+                    fontSize : 60 * _scale
                 }
 
                 let gp = _gW * 0.27,
@@ -843,7 +931,9 @@ window.onload = function () {
                 
                 for ( let i = 0; i < 3; i++ ) {
 
-                    let strNumbr = _bestScores[i] < 10 ? '0' + _bestScores[i] : _bestScores[i];
+                    let moves = parseInt(_bestScores.moves[i]);
+
+                    let strNumbr = moves < 10 ? '0' + moves : moves;
 
                     let txt = this.add.text ( sX + i* gp, sY, strNumbr, configtxt ).setOrigin (0.5);
 
