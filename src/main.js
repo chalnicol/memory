@@ -8,9 +8,8 @@ window.onload = function () {
 
         let _scale = _gW/720;
 
-        //console.log ( _gW, _gH, _scale );
-
         let _bestScores = { moves: [], time : [] };
+
 
         class Preloader extends Phaser.Scene {
 
@@ -122,15 +121,8 @@ window.onload = function () {
 
                 let bg = this.add.image (_gW/2, _gH/2, 'bg').setScale (_gW/720);
 
-                let title = this.add.image (_gW/2, _gH/2 -_gH/2, 'title').setScale (_gW/720);
+                let title = this.add.image (_gW/2, _gH/2, 'title').setScale (_gW/720);
 
-                this.tweens.add ({
-                    targets : title,
-                    y : _gH/2,
-                    duration : 1000,
-                    easeParams : [ 1, 0.8 ],
-                    ease : 'Elastic'
-                });
 
                 let click = this.add.image (_gW/2, _gH/2, 'click').setScale (_gW/720);
 
@@ -146,7 +138,7 @@ window.onload = function () {
                 this.add.image ( _gW/2, ry, 'dude').setDisplaySize( rz, rz);
 
 
-                let rect = this.add.rectangle ( _gW/2, 448 * _scale, 550 * _scale, 90 * _scale );
+                let rect = this.add.rectangle ( _gW/2, 353 * _scale, 550 * _scale, 90 * _scale );
             
                 rect.once ('pointerdown', function () {
                     
@@ -208,10 +200,28 @@ window.onload = function () {
             }
             initScores () {
 
-                this.facebook.getData([ 'bestScores', 'bestTime']);
+                
+                /* this.facebook.data.set('bestScores', _bestScores.moves.toString() );
+
+                this.facebook.on('savedata', function (data) {
+
+                    console.log ('save data successful : gamescreen', data );
+                
+                });
+                
+                this.facebook.on('savedatafail', function (error) {
+                
+                    console.log ('error saving data : gamescreen');
+                });   */
+               
+                
+
+                this.facebook.getData(['bestScores', 'bestTime']);
 
                 this.facebook.once('getdata', function (data) {
 
+                    console.log ( data );
+                   
                     this.updateStats (data);
 
                     this.tweens.add ({
@@ -221,6 +231,11 @@ window.onload = function () {
                         ease : 'Power2',
                         delay : 300
                     });
+
+                    this.time.delayedCall (100, function () {
+                        this.music.play ('move');
+                    }, [], this );
+
 
                 }, this);
 
@@ -232,6 +247,19 @@ window.onload = function () {
 
             }
             updateStats ( data ) {
+
+                if ( data.hasOwnProperty ('bestTime') ) {
+
+                    let timeArr = data.bestTime.split(',');
+                    
+                    for ( var i=0; i<timeArr.length; i++) {
+        
+                        this.stats.time [i].setText ( this.convertToTime( timeArr[i] ) );
+                    }
+
+                    _bestScores.time = timeArr;
+                }
+
 
                 if ( data.hasOwnProperty ('bestScores') ) {
 
@@ -248,24 +276,29 @@ window.onload = function () {
             
                 }
 
-                if ( data.hasOwnProperty ('bestTime') ) {
-
-                    let timeArr = data.bestTime.split(',');
-
-                    for ( var i=0; i<timeArr.length; i++) {
-        
-                        this.stats.moves [i].setText ( timeArr[i]);
-                    }
-
-                    _bestScores.time = timeArr;
-            
-                }
-
                
+               
+
+            }
+            convertToTime ( sec ) {
+
+                let min = Math.floor ( sec/60);
+
+                let hrs = Math.floor (min/60);
+
+                let str_sec = (sec%60) < 10 ? '0' + (sec%60) : (sec%60);
+
+                let str_min = (min%60) < 10 ? '0' + (min%60) : (min%60);
+
+                let str_hrs = hrs < 10 ? '0' + hrs : hrs;
+                
+                return str_hrs + ":" + str_min +":" + str_sec;
 
             }
             initGame () {
                 
+                this.facebook.removeAllListeners();
+
                 this.bgmusic.stop();
                 
                 this.time.delayedCall (500, function () {
@@ -293,6 +326,17 @@ window.onload = function () {
 
                 this.gmData = [{ r : 5, c : 4 }, { r : 6, c : 5 }, { r : 7, c : 6 } ];
 
+                this.facebook.on('savedata', function (data) {
+
+                    console.log ('save data successful : gamescreen', data );
+                
+                });
+                
+                this.facebook.on('savedatafail', function (error) {
+                
+                    console.log ('error saving data : gamescreen');
+                });
+
                 this.initSound ();
 
                 this.initGameInterface ();
@@ -310,45 +354,15 @@ window.onload = function () {
             }
             initGameInterface () {
 
-                const bg = this.add.image (_gW/2, _gH/2, 'bg1').setScale (_gW/720);
+                let bg = this.add.image (_gW/2, _gH/2, 'bg1').setScale (_gW/720);
 
-                const panel = this.add.image (_gW/2, _gH/2, 'panel').setScale (_gW/720);
-
-                const configlvlTxt = {
-                    color : '#fff',
-                    fontFamily : 'Oswald',
-                    fontSize : Math.floor ( 40 * _gH/1280)
-                }
-
-                let txty = 150 * _scale;
-                
-                this.lvlText = this.add.text ( _gW * 0.12, txty , 'Level : 1', configlvlTxt ).setOrigin (0,0.5);
-                
-                this.lvlText.setShadow  ( 0, 2, '#000', 3, false, true );
-
-                this.movText = this.add.text ( _gW * 0.88, txty, 'Moves : 0', configlvlTxt ).setOrigin (1,0.5);
-
-                this.movText.setShadow  ( 0, 2, '#000', 3, false, true );
-
-            
-                const best_btn = this.add.image (_gW/2, _gH * 0.9, 'best_btn').setScale (_gW/720).setInteractive();
-
-                best_btn.on('pointerover', function () {
-                    this.setFrame (1);
-                });
-                best_btn.on('pointerout', function () {
-                    this.setFrame (0);
-                });
-                best_btn.on('pointerdown', function () {
-                    //..
-                    this.scene.playSound ('clicka')
-                    this.scene.showBestScores();
-                });
+                let panel = this.add.image (_gW/2, _gH/2, 'panel').setScale (_gW/720);
 
 
+                //..
                 this.controlBtns = [];
 
-                const btns = ['Home', 'Back', 'Skip'];
+                let btns = ['Home', 'Back', 'Skip'];
 
                 let skpW = 120 * _scale,
                     skpH = 40 * _scale,
@@ -393,6 +407,49 @@ window.onload = function () {
                 }
 
 
+
+                //...
+                let configlvlTxt = {
+                    color : '#fff',
+                    fontFamily : 'Oswald',
+                    fontSize : 35 * _scale
+                }
+
+                let txty = 150 * _scale;
+                
+                this.lvlText = this.add.text ( _gW * 0.1, txty , 'Level : 1', configlvlTxt ).setOrigin (0,0.5);
+                
+                this.lvlText.setShadow  ( 0, 2, '#000', 3, false, true );
+
+                this.movText = this.add.text ( _gW * 0.3, txty, 'Moves : 0', configlvlTxt ).setOrigin (0,0.5);
+
+                this.movText.setShadow  ( 0, 2, '#000', 3, false, true );
+
+                this.timerText = this.add.text ( _gW * 0.57, txty, 'Timer : 00:00:00', configlvlTxt ).setOrigin ( 0, 0.5);
+                
+                this.timerText.setShadow  ( 0, 2, '#000', 3, false, true );
+            
+
+                //..
+                let best_btn = this.add.image (_gW/2, _gH * 0.9, 'best_btn').setScale (_gW/720).setInteractive();
+
+                best_btn.on('pointerover', function () {
+                    this.setFrame (1);
+                });
+                best_btn.on('pointerout', function () {
+                    this.setFrame (0);
+                });
+                best_btn.on('pointerdown', function () {
+                    //..
+                    this.scene.playSound ('clicka')
+                    this.scene.showBestScores();
+                });
+
+
+                //
+               
+
+
             }
             initGame () {
 
@@ -407,8 +464,11 @@ window.onload = function () {
 
                 this.moves = 0;
 
+                this.totalSeconds = 0;
+
                 this.lvlText.text = 'Level : ' + this.gmLvl;
-                this.movText.text = 'Moves : ' + this.moves;
+                this.movText.text = 'Moves : 0';
+                this.timerText.text = 'Timer : 00:00:00';
 
                 this.createTiles ( r, c );
 
@@ -420,6 +480,15 @@ window.onload = function () {
                     if ( this.gmLvl < 3 ) this.controlBtns[2].setInteractive().setAlpha(1);
                 }, [], this);
 
+                this.gameTimer = this.time.addEvent ({ delay:1000, loop:true, callback: this.showTimer, callbackScope:this });
+                
+
+            }
+            showTimer () {
+
+                this.totalSeconds += 1;
+
+                this.timerText.setText ( 'Timer : ' + this.convertToTime ( this.totalSeconds) );
 
             }
             createTiles ( row, col ) {
@@ -465,7 +534,7 @@ window.onload = function () {
 
                         //frames [counter] + 1
 
-                        const txt = this.add.text ( tileW * 0.35, -tileW * 0.4, counter + 1, {fontSize:tileW*0.2, fontFamily:'Oswald', color:'#fff' }  ).setOrigin (1, 0);
+                        const txt = this.add.text ( tileW * 0.35, -tileW * 0.4, frames [counter] + 1, {fontSize:tileW*0.2, fontFamily:'Oswald', color:'#fff' }  ).setOrigin (1, 0);
                         txt.setShadow (0,2,'#f00', 2, false, true);
 
                         miniCont.add ([tile, img, txt]);
@@ -567,6 +636,8 @@ window.onload = function () {
                         this.registerScore ();
 
                         this.showPrompt( this.gmLvl == 3 );
+
+                        this.gameTimer.destroy();
 
                         this.time.delayedCall ( 300, function () {
                             this.playSound ( this.gmLvl != 3 ? 'home' : 'alternate', 0.4 );
@@ -811,17 +882,7 @@ window.onload = function () {
 
                 }
                
-                this.facebook.on('savedata', function (data) {
-
-                    console.log ('save data successful : gamescreen', data );
                 
-                });
-                
-                this.facebook.on('savedatafail', function (error) {
-                
-                    console.log ('error saving data : gamescreen');
-                });
-
 
             }
             showPrompt ( end = false ) {
@@ -901,6 +962,22 @@ window.onload = function () {
                 });
 
             }
+            startClock () {
+
+                let timedEvent = this.time.addEvent({ delay: 1000, callback: onEvent, callbackScope: this, repeat: 9 });
+
+                this.input.on('pointerdown', function () {
+
+                    if (timedEvent.paused)
+                    {
+                        timedEvent.paused = false;
+                    }
+                    else
+                    {
+                        timedEvent.paused = true;
+                    }
+                });
+            }
             showBestScores () {
 
                 this.bgRect = this.add.rectangle (0,0, _gW, _gH, 0x0a0a0a, 0.7).setOrigin (0).setInteractive();
@@ -914,30 +991,39 @@ window.onload = function () {
 
                 this.promptScreen = this.add.container (-_gW, 0).setDepth (999);
 
-                const img = this.add.image (_gW/2, _gH/2, 'best_scores').setScale(_gW/720);
+                let img = this.add.image (_gW/2, _gH/2, 'best_scores').setScale(_gW/720);
 
                 this.promptScreen.add (img);
 
-                let configtxt = {
-                    color : '#dedede',
-                    fontFamily : 'Coda',
-                    fontSize : 60 * _scale
-                }
+                let itemW = 568 * _scale,
+                itemH = 80 * _scale,
+                itemX = 74 * _scale,
+                itemY = 587 * _scale;
 
-                let gp = _gW * 0.27,
-                    sX = _gW * 0.23,
-                    sY = _gH * 0.55;
+                let txtConfiga = { color : '#333', fontSize : itemH * 0.5, fontFamily : 'Oswald'  };
 
-                
                 for ( let i = 0; i < 3; i++ ) {
 
-                    let moves = parseInt(_bestScores.moves[i]);
+                    let miniCont = this.add.container ( itemX, itemY + i * ( itemH ) ).setName ('item' + i );
 
-                    let strNumbr = moves < 10 ? '0' + moves : moves;
+                    let bgRect = this.add.rectangle ( 0, 0, itemW, itemH, 0xffffff, 0.1 ).setOrigin (0);
 
-                    let txt = this.add.text ( sX + i* gp, sY, strNumbr, configtxt ).setOrigin (0.5);
+                    let lvl = this.add.text ( itemW * 0.11, itemH/2, (i+1) < 10 ? '0' + (i+1) : i+1, txtConfiga  ).setOrigin (0.5);
 
-                    this.promptScreen.add (txt);
+
+                    let timeval = this.convertToTime (_bestScores.time [i]);
+                    
+                    let timetxt = this.add.text ( itemW * 0.49 , itemH/2, timeval, txtConfiga  ).setOrigin (0.5);
+
+
+                    let val = _bestScores.moves [ i ];
+
+                    let movestxt = this.add.text ( itemW * 0.88, itemH/2, val < 10 ? '0'+val : val, txtConfiga  ).setOrigin (0.5);
+
+                    miniCont.add ([bgRect, lvl, timetxt, movestxt]);
+
+                    this.promptScreen.add (miniCont);
+
                 }
 
 
@@ -949,6 +1035,7 @@ window.onload = function () {
                     ease : 'Elastic'
                 });
 
+                this.gameTimer.paused=true;
 
             }
             removeScores () {
@@ -956,6 +1043,7 @@ window.onload = function () {
                 let _this = this;
 
                 this.tweens.add ({
+
                     targets : this.promptScreen,
                     x : _gW,
                     duration : 300,
@@ -964,6 +1052,7 @@ window.onload = function () {
                     onComplete : function () {
                         _this.promptScreen.destroy ();
                         _this.bgRect.destroy();
+                        _this.gameTimer.paused=false;
                     }
                 });
 
@@ -973,13 +1062,19 @@ window.onload = function () {
 
                 this.playSound ('clicka');
 
+                this.gameTimer.destroy();
+
                 switch (id) {
                     case 0:
+                       
                         this.leaveGame();
                     break;
                     case 1: 
                         if ( this.gmLvl == 1 ) return;
+
+
                         this.gmLvl += -1;
+
                         this.changeLevel ();
                         break;
                     case 2:
@@ -1002,10 +1097,29 @@ window.onload = function () {
                 this.initGame ();
 
             }
+            convertToTime ( sec ) {
+
+                let min = Math.floor ( sec/60);
+
+                let hrs = Math.floor (min/60);
+
+                let str_sec = (sec%60) < 10 ? '0' + (sec%60) : (sec%60);
+
+                let str_min = (min%60) < 10 ? '0' + (min%60) : (min%60);
+
+                let str_hrs = hrs < 10 ? '0' + hrs : hrs;
+                
+                return str_hrs + ":" + str_min +":" + str_sec;
+
+            }
             playSound (id , vol = 0.6) {
             this.music.play (id, { volume : vol })
             }
             leaveGame () {
+
+                this.facebook.removeAllListeners();
+
+                this.gameTimer.destroy ();
 
                 this.bgmusic.stop ();
 
