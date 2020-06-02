@@ -10,7 +10,6 @@ window.onload = function () {
 
         let _bestScores = { moves: [], time : [] };
 
-
         class Preloader extends Phaser.Scene {
 
             constructor ()
@@ -41,9 +40,13 @@ window.onload = function () {
 
                 this.load.spritesheet('btns2', 'assets/images/btns.png', { frameWidth: 322, frameHeight: 82 });
 
-                this.load.spritesheet('best_btn', 'assets/images/best_btn.png', { frameWidth: 645, frameHeight: 89 });
+                this.load.spritesheet('best_btn', 'assets/images/best_btn.png', { frameWidth: 638, frameHeight: 85 });
 
                 this.load.spritesheet ('skip_btn', 'assets/images/skip_btn.png', { frameWidth: 50, frameHeight: 50 });
+
+                this.load.spritesheet ('click', 'assets/images/click.png', { frameWidth: 550, frameHeight: 65 });
+
+                this.load.spritesheet ('startLevel', 'assets/images/startLevel.png', { frameWidth: 326, frameHeight: 80 });
 
 
                 this.load.image ('bg', 'assets/images/bg.png');
@@ -54,8 +57,6 @@ window.onload = function () {
 
                 this.load.image ('table', 'assets/images/table.png');
 
-                this.load.image ('click', 'assets/images/click.png');
-
                 this.load.image ('panel', 'assets/images/panel.png');
 
                 this.load.image ('home_btn', 'assets/images/home_btn.png');
@@ -63,7 +64,6 @@ window.onload = function () {
                 this.load.image ('prompt', 'assets/images/prompt.png');
 
                 this.load.image ('best_scores', 'assets/images/best_scores.png');
-
 
                 this.add.text ( _gW/2, _gH/2, '', { fontSize: 20*_scale, fontFamily:'Oswald', color:'#fff'}).setOrigin(0.5);
 
@@ -104,6 +104,8 @@ window.onload = function () {
 
                 this.initTable ();
                 
+                //this.initData ();
+
                 this.initScores ();
 
             }
@@ -124,9 +126,6 @@ window.onload = function () {
                 let title = this.add.image (_gW/2, _gH/2, 'title').setScale (_gW/720);
 
 
-                let click = this.add.image (_gW/2, _gH/2, 'click').setScale (_gW/720);
-
-
                 //set player details..
 
                 let ry = _gH * 0.48, rz = 120 * _scale;
@@ -138,9 +137,25 @@ window.onload = function () {
                 this.add.image ( _gW/2, ry, 'dude').setDisplaySize( rz, rz);
 
 
-                let rect = this.add.rectangle ( _gW/2, 353 * _scale, 550 * _scale, 90 * _scale );
+                //click..
+
+                let clickCon = this.add.container ( -_gW/2, 353 * _scale ).setSize( 544* _scale, 63 * _scale);
             
-                rect.once ('pointerdown', function () {
+                let clickimg = this.add.image (0, 0, 'click').setScale (_gW/720);
+
+                clickCon.add ( clickimg );
+
+
+                clickCon.on ('pointerover', function () {
+                    this.getAt (0).setFrame ( 1 );
+                });
+                clickCon.on ('pointerup', function () {
+                    this.getAt (0).setFrame ( 0 );
+                });
+                clickCon.on ('pointerout', function () {
+                    this.getAt (0).setFrame ( 0 );
+                });
+                clickCon.once ('pointerdown', function () {
                     
                     this.scene.music.play('clicka');
 
@@ -148,9 +163,26 @@ window.onload = function () {
             
                 });
 
-                this.time.delayedCall ( 1000, function () {
-                    rect.setInteractive();
-                },[], this );
+
+                let delayEntry = 900;
+
+                this.tweens.add ({
+                    targets: clickCon,
+                    x : _gW/2,
+                    duration : 300,
+                    ease : 'Power2',
+                    delay : delayEntry,
+                    onComplete : function () {
+                        this.targets [0].setInteractive ();
+                    }
+                })
+
+               this.time.delayedCall ( delayEntry, function () {
+                    this.music.play ('move');
+                },[], this  );
+
+                
+               
 
 
             }
@@ -198,10 +230,15 @@ window.onload = function () {
 
 
             }
-            initScores () {
-
+            initData () {
+                 
+                var initData = {
+                    bestScores : _bestScores.moves.toString(),
+                    bestTime : _bestScores.time.toString(),
+                }
+                this.facebook.saveData ( initData );
                 
-                /* this.facebook.data.set('bestScores', _bestScores.moves.toString() );
+                //this.facebook.data.set('bestScores', _bestScores.moves.toString() );
 
                 this.facebook.on('savedata', function (data) {
 
@@ -212,7 +249,12 @@ window.onload = function () {
                 this.facebook.on('savedatafail', function (error) {
                 
                     console.log ('error saving data : gamescreen');
-                });   */
+                });   
+
+            }
+            initScores () {
+
+               
                
                 
 
@@ -297,8 +339,6 @@ window.onload = function () {
             }
             initGame () {
                 
-                this.facebook.removeAllListeners();
-
                 this.bgmusic.stop();
                 
                 this.time.delayedCall (500, function () {
@@ -460,6 +500,8 @@ window.onload = function () {
 
                 this.scoreTotal = r * c / 2;
 
+                this.isInitPrompted = false;
+
                 this.score = 0;
 
                 this.moves = 0;
@@ -472,6 +514,8 @@ window.onload = function () {
 
                 this.createTiles ( r, c );
 
+                this.showInitPrompt ();
+
                 this.controlBtns[1].disableInteractive().setAlpha(0.3);
                 this.controlBtns[2].disableInteractive().setAlpha(0.3);
 
@@ -480,8 +524,9 @@ window.onload = function () {
                     if ( this.gmLvl < 3 ) this.controlBtns[2].setInteractive().setAlpha(1);
                 }, [], this);
 
-                this.gameTimer = this.time.addEvent ({ delay:1000, loop:true, callback: this.showTimer, callbackScope:this });
+                this.gameTimer = this.time.addEvent ({ delay:1000, loop:true, callback: this.showTimer, callbackScope:this, paused:true });
                 
+
 
             }
             showTimer () {
@@ -588,6 +633,10 @@ window.onload = function () {
 
                 this.playSound ('move');
 
+            }
+            startLevel () {
+                this.removeInitPrompt ();
+                this.gameTimer.paused = false;
             }
             removeTiles () {
                 this.tilesContainer.destroy ();
@@ -885,6 +934,62 @@ window.onload = function () {
                 
 
             }
+            showInitPrompt () {
+                
+                this.isInitPrompted = true;
+
+                this.startLevelContainer = this.add.container ( 0, 0 );
+
+                let timeVal = 'Time: ' + this.convertToTime(_bestScores.time [this.gmLvl -1]),
+                    moveVal = 'Moves: ' +  this.convertMove (_bestScores.moves [this.gmLvl - 1]);
+
+               
+                let configlvlTxt2 = { color : "#fff", fontFamily : 'Oswald', fontSize : 36*_scale };
+
+                let smREct = this.add.rectangle (_gW/2, _gH/2, _gW, _gH *0.65 ).setInteractive ();
+
+                let img = this.add.image (_gW/2, _gH/2, 'prompt').setScale(_scale) ;
+
+
+                let title = this.add.text ( _gW/2, 495*_scale, 'Level Stats',  configlvlTxt2 ).setOrigin ( 0.5 );
+
+                title.setShadow  ( 0, 2, '#000', 3, false, true );
+
+
+                let txt1 = this.add.text ( _gW/2, 580*_scale, timeVal,  configlvlTxt2 ).setOrigin ( 0.5 );
+
+                let txt2 = this.add.text ( _gW/2, 645*_scale, moveVal, configlvlTxt2 ).setOrigin ( 0.5 );
+                
+                let btn = this.add.image ( _gW/2, 735 * _scale, 'startLevel').setScale (_scale).setInteractive();
+
+                btn.on ('pointerover', function () {
+                    this.setFrame (1);
+                });
+                btn.on ('pointerout', function () {
+                    this.setFrame (0);
+                });
+                btn.on ('pointerup', function () {
+                    this.setFrame (0);
+                });
+                btn.on ('pointerdown', function () {
+
+                    this.playSound ('clicka');
+                    this.startLevel();
+
+                }, this);
+                
+                this.startLevelContainer.add ( [ smREct, img, title, txt1, txt2, btn ]);
+
+              
+
+            }
+            removeInitPrompt () {
+
+                this.isInitPrompted = false;
+
+                this.startLevelContainer.destroy();
+
+            }
             showPrompt ( end = false ) {
 
                 this.bgRect = this.add.rectangle (0,0, _gW, _gH, 0x0a0a0a, 0.7).setOrigin (0).setInteractive();
@@ -1050,12 +1155,14 @@ window.onload = function () {
                     easeParams : [0.5, 1],
                     ease : 'Elastic',
                     onComplete : function () {
+
                         _this.promptScreen.destroy ();
                         _this.bgRect.destroy();
-                        _this.gameTimer.paused=false;
-                    }
-                });
 
+                        if ( !_this.isInitPrompted ) _this.gameTimer.paused=false;
+                    }
+
+                });
 
             }
             controlsClick ( id ) {
@@ -1084,17 +1191,25 @@ window.onload = function () {
                         break;
                 }
 
-            
             }
             changeLevel () {
                 
                 for ( let i in this.skipBtn ) {
                     this.skipBtn[i].disableInteractive ().setAlpha (0.5);
                 }
+
+                if ( this.isInitPrompted ) this.removeInitPrompt ();
                 
                 this.removeTiles();
 
                 this.initGame ();
+
+            }
+            convertMove ( mov) {
+
+                if ( parseInt ( mov ) < 10 ) return '0' + mov;
+
+                return mov;
 
             }
             convertToTime ( sec ) {
@@ -1117,7 +1232,8 @@ window.onload = function () {
             }
             leaveGame () {
 
-                this.facebook.removeAllListeners();
+                this.facebook.removeListener ('savedata');
+                this.facebook.removeListener ('savedatafail');
 
                 this.gameTimer.destroy ();
 
