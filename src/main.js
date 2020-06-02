@@ -34,7 +34,7 @@ window.onload = function () {
                 this.load.audio ('bgsound2', ['assets/sfx/bgsound2.ogg', 'assets/sfx/bgsound2.mp3'] );
                 
 
-                this.load.spritesheet('thumbs', 'assets/images/spritesheet.png', { frameWidth: 70, frameHeight: 70 });
+                this.load.spritesheet('thumbs', 'assets/images/spritesheet.png', { frameWidth: 75, frameHeight: 75 });
 
                 this.load.spritesheet('tiles', 'assets/images/tiles.png', { frameWidth: 158, frameHeight: 158 });
 
@@ -563,55 +563,35 @@ window.onload = function () {
                         let xp = sX + j * (tileW + tileS),
                             yp = sY + i * (tileW + tileS);
 
-                        const data = {
-                            id : counter,
-                            content : frames [counter] + 1,
-                            gridPost : counter,
-                            isOpen : false,
-                            isRevealed : false,
-                        };
+                        this.grid.push ({'x':xp, 'y':yp });
 
-                        const miniCont = this.add.container ( _gW/2, _gH/2 ).setSize (tileW, tileW).setData(data);
+                    
+                        let tileR = new TileRaw ( this, 'tile'+ counter, _gW/2, _gH/2, tileW, tileW, frames [counter], counter, counter+1 );
 
-                        const tile = this.add.image (0, 0, 'tiles' ).setScale (tileW/158);
-                        
-                        const img = this.add.image (0,0, 'thumbs', 0 ).setScale (tileW/70 * 0.75).setVisible(true);
-
-                        //frames [counter] + 1
-
-                        const txt = this.add.text ( tileW * 0.35, -tileW * 0.4, frames [counter] + 1, {fontSize:tileW*0.2, fontFamily:'Oswald', color:'#fff' }  ).setOrigin (1, 0);
-                        txt.setShadow (0,2,'#f00', 2, false, true);
-
-                        miniCont.add ([tile, img, txt]);
-
-                        miniCont.on('pointerover', function () {
+                        tileR.on('pointerover', function () {
                             this.getAt (0).setFrame (1);
                         });
-                        miniCont.on('pointerout', function () {
+                        tileR.on('pointerout', function () {
                             this.getAt (0).setFrame (0);
                         });
-                        miniCont.on('pointerdown', function () {
+                        tileR.on('pointerdown', function () {
 
                             if ( this.scene.halt ) return;
 
+                            this.flip ();
+                            
                             this.removeInteractive();
-
-                            this.getAt (0).setFrame (2);
-
-                            this.getAt (1).setFrame ( this.getData('content'));
-
-                            this.getAt (2).setVisible (false);
-
-                            this.setData ('isOpen', true );
 
                             this.scene.playSound ('pick');
 
-                            this.scene.tileClick ( { id :this.getData('id'), content : this.getData('content')} );
+                            this.scene.tileClick ( this.id );
 
                         });
 
+                        this.tilesContainer.add ( tileR );
+
                         this.tweens.add ({
-                            targets : miniCont,
+                            targets : tileR,
                             x : xp, y : yp,
                             duration : 500,
                             easeParams : [1.5, 1],
@@ -621,13 +601,8 @@ window.onload = function () {
                             }
                         });
 
-                        this.grid.push ({ 'x':xp, 'y':yp });
-
-                        this.tiles.push (miniCont);
-                        
-                        this.tilesContainer.add ( miniCont );
-
                         counter++;
+
                     }
                 }
 
@@ -641,9 +616,9 @@ window.onload = function () {
             removeTiles () {
                 this.tilesContainer.destroy ();
             }
-            tileClick ( data ) {
+            tileClick ( tileid ) {
                 
-                this.openTiles.push ( data );
+                this.openTiles.push ( tileid );
 
                 this.moves += 1;
                 this.movText.text = 'Moves : ' + this.moves;
@@ -657,25 +632,26 @@ window.onload = function () {
             }
             analyzeData () {
 
-                if ( this.openTiles [0].content == this.openTiles[1].content ) {
+
+                let tile1 = this.tilesContainer.getByName ( this.openTiles[0] ),
+                    tile2 = this.tilesContainer.getByName ( this.openTiles[1] );
+
+                if ( tile1.cnt == tile2.cnt) {
                     
-                    let tile1 = this.tiles [ this.openTiles[0].id ],
-                        tile2 = this.tiles [ this.openTiles[1].id ];
-
-                    tile1.setData('isRevealed', true );
-                    tile2.setData('isRevealed', true );
-
+                    tile1.isRevealed = true;
+                    tile2.isRevealed = true;
+                    
                     this.tweens.add ({
                         targets : [ tile1, tile2 ],
                         scaleX : 1.1,
                         scaleY : 1.1,
                         duration : 100,
                         yoyo : true,
-                        //delay : 100,
                         ease : 'Cubic.easeIn'
                     });
 
                     this.halt = false;
+
                     this.openTiles = [];
 
                     this.score += 1;
@@ -688,16 +664,16 @@ window.onload = function () {
 
                         this.gameTimer.destroy();
 
-                        this.time.delayedCall ( 300, function () {
+                        this.time.delayedCall ( 300, this.playSound, [ this.gmLvl != 3 ? 'home' : 'alternate', 0.4 ], this );
+
+                        /* this.time.delayedCall ( 300, function () {
                             this.playSound ( this.gmLvl != 3 ? 'home' : 'alternate', 0.4 );
                         }, [], this)
-                        
+                         */
 
                     }else {
 
-                        this.time.delayedCall ( 300, function () {
-                            this.playSound ('bleep', 0.4 )
-                        }, [], this)
+                        this.time.delayedCall ( 300, this.playSound, [ 'bleep', 0.4 ], this );
                         
                     }
 
@@ -715,17 +691,10 @@ window.onload = function () {
 
                         for ( let i = 0; i < this.openTiles.length; i++ ) {
                             
-                            let tilee =  this.tiles [ this.openTiles[i].id ];
+                            let tileR =  this.tilesContainer.getByName ( this.openTiles[i] );
 
-                            tilee.getAt(0).setFrame (0);
-
-                            tilee.getAt(1).setFrame (0);
-
-                            tilee.getAt(2).setVisible (true);
-
-                            tilee.setData('isOpen', false );
-
-                            tilee.setInteractive();
+                            tileR.flip (false).setInteractive();
+                            
                         }               
 
                         this.halt = false;
@@ -734,7 +703,6 @@ window.onload = function () {
 
                     }, [], this)
                     
-
                 }
             }
             shakeUpGrid () {
@@ -743,15 +711,16 @@ window.onload = function () {
                 
                 if ( this.gmLvl == 1 ) {
 
-                    let tile1 = this.tiles [ this.openTiles[0].id ],
-                        tile2 = this.tiles [ this.openTiles[1].id ];
+                    let tile1 = this.tilesContainer.getByName (this.openTiles[0]),
+                        tile2 =  this.tilesContainer.getByName (this.openTiles[1]);
 
-                    let grid1 = tile1.getData('gridPost');
-                    let grid2 = tile2.getData('gridPost');
+                    let grid1 = tile1.gp,
+                        grid2 = tile2.gp;
                     
                     this.tilesContainer.bringToTop ( tile1 );
                     this.tilesContainer.bringToTop ( tile2 );
                     
+
                     this.tweens.add ({
                         targets : tile1,
                         x : this.grid [grid2].x,
@@ -767,8 +736,9 @@ window.onload = function () {
                         ease : 'Power3' 
                     });
 
-                    tile1.setData ('gridPost', grid2);
-                    tile2.setData ('gridPost', grid1);
+                    tile1.gp = grid2;
+                    tile2.gp = grid1;
+                    
                     
                 }
                 else if ( this.gmLvl == 2)  {
@@ -776,31 +746,33 @@ window.onload = function () {
                     //get tiles and push to temp arr..
                     var tempArr = [];
 
-                    for ( let i in this.tiles ) {
-
-                        let tiles = this.tiles [i];
-
-                        if ( !tiles.getData ('isRevealed') && !tiles.getData('isOpen') ) {
-                            tempArr.push ( tiles.getData('id') );
+                    this.tilesContainer.each ( function ( tile ) {
+                        if ( !tile.isRevealed && !tile.getData('isOpen') ) {
+                            tempArr.push ( tile.id );
                         }
-                    }
+                    });
 
-                    //randomize..
-                    while ( tempArr.length > 2 ) {
+                    var finArr = [];
+
+                    while ( finArr.length < 2 ) {
 
                         let randomIndex = Math.floor ( Math.random() * tempArr.length );
 
-                        tempArr.splice ( randomIndex, 1);
+                        tempArr.splice ( randomIndex, 1 );
+
+                        finArr.push ( tempArr [ randomIndex ] );
+
                     }
+
 
                     //and set..
                     for ( let i in this.openTiles ) {
 
-                        let tilea = this.tiles [ this.openTiles[i].id ],
-                            tileb = this.tiles [ tempArr [i] ];
+                        let tilea = this.tilesContainer.getByName ( this.openTiles [i] ),
 
-                        let gridPosa = tilea.getData('gridPost'),
-                            gridPosb = tileb.getData('gridPost');
+                            tileb = this.tilesContainer.getByName ( finArr [i] );
+
+                        let gridPosa = tilea.gp,  gridPosb = tileb.gp;
 
                         this.tilesContainer.bringToTop ( tilea );
                         this.tilesContainer.bringToTop ( tileb );
@@ -820,9 +792,8 @@ window.onload = function () {
                             ease : 'Power3' 
                         });
 
-
-                        tilea.setData('gridPost', gridPosb);
-                        tileb.setData('gridPost', gridPosa);
+                        tilea.gp = gridPosb;
+                        tileb.gp = gridPosa;
                         
                     }
 
@@ -830,9 +801,10 @@ window.onload = function () {
                 else {
 
                     let tempArr = [];
-                    for ( let i in this.tiles ) {
-                        tempArr.push ( this.tiles[i].getData('gridPost') );
-                    }
+
+                    this.tilesContainer.each ( function ( tile ) {
+                        tempArr.push ( tile.gp );
+                    });
 
                     //randomize..
                     let gridArr = [];
@@ -848,19 +820,24 @@ window.onload = function () {
 
                     //and set..
                     let counter = 0;
-                    for ( let i in this.tiles ) {
+
+                    this.tilesContainer.each ( function ( tile ) {
+
                         this.tweens.add ({
-                            targets : this.tiles [i],
+                            targets : tile,
                             x : this.grid [gridArr [counter]].x,
                             y : this.grid [gridArr [counter]].y,
                             duration : 500,
                             ease : 'Power3' 
                         });
 
-                        this.tiles [i].setData ('gridPost', gridArr[counter]);
+                        tile.gp = gridArr [counter];
 
                         counter++;
-                    }
+
+                    }, this);
+
+                  
                 }
                 
             }
@@ -870,11 +847,12 @@ window.onload = function () {
                 //let total = this.row * this.col;
 
                 let arr = [];
-                for ( let i=0; i<23; i++) {
+                for ( let i=0; i<22; i++) {
                     arr.push ( i );
                 }
 
                 let tmp_arr = [];
+
                 while (tmp_arr.length < (total/2) ) {
 
                     let randomIndex = Math.floor ( Math.random() * arr.length );
@@ -1244,6 +1222,49 @@ window.onload = function () {
             }
 
         }
+
+        class TileRaw extends Phaser.GameObjects.Container {
+
+            constructor ( scene, id, x, y, width, height, cnt, gp, tn ) {
+
+                super ( scene, x, y );
+
+                this.setSize ( width, height ).setName (id);
+
+                this.id = id;
+                this.cnt = cnt;
+                this.gp = gp;
+                this.isOpen = false;
+                this.isRevealed = false;
+
+                let tileimg = scene.add.image ( 0, 0, 'tiles', 0 ).setScale ( width/158 );
+
+                let contimg = scene.add.image ( 0,0, 'thumbs', cnt ).setScale ( width/75 *0.9 ).setVisible ( false );
+
+                let tileNumber = scene.add.text ( width*0.35, -height*0.4, tn, { color:'#fff', fontSize: height * 0.2, fontFamily : 'Oswald'}).setOrigin (1, 0);
+
+                tileNumber.setShadow (0,2,'#f00', 2, false, true);
+
+                this.add ( [tileimg, contimg, tileNumber ]);
+
+                scene.add.existing(this);
+
+            }
+            flip ( open = true ) {
+
+                this.isOpen = open;
+
+                this.getAt (0).setFrame ( open ? 2 : 0 );
+                this.getAt (1).setVisible (open);
+                this.getAt (2).setVisible (!open);
+
+                return this;
+            }
+
+
+        } 
+
+
 
         var config = {
 
