@@ -3,8 +3,16 @@ window.onload = function () {
 
     FBInstant.initializeAsync().then(function() {
 
-        let _gW = document.getElementById('game_div').clientWidth, 
-            _gH = Math.ceil (16/9 * _gW);
+        let windowHeight = window.innerHeight;
+
+        
+        let _gH = windowHeight > 1280 ? 1280 : windowHeight,
+            _gW = 9/16 * _gH;
+
+        document.getElementById('game_div').style.height = _gH;
+        document.getElementById('game_div').style.width = _gW;
+       
+        console.log ( windowHeight, _gH, _gW )
 
         let _scale = _gW/720;
 
@@ -1304,7 +1312,7 @@ window.onload = function () {
                 let contimg = scene.add.image ( 0,0, 'thumbs', cnt ).setScale ( width/75 *0.9 ).setVisible ( false );
 
                 //tn < 10 ? '0'+tn : tn
-                let tileNumber = scene.add.text ( width*0.35, -height*0.4, cnt, { color:'#fff', fontSize: height * 0.25, fontFamily : 'Oswald'}).setOrigin (1, 0);
+                let tileNumber = scene.add.text ( width*0.35, -height*0.4, tn, { color:'#fff', fontSize: height * 0.25, fontFamily : 'Oswald'}).setOrigin (1, 0);
 
                 tileNumber.setShadow (0,2,'#f00', 2, false, true);
 
