@@ -10,7 +10,7 @@
         
         <script src="https://connect.facebook.net/en_US/fbinstant.6.3.js"></script>
 
-       <!--  <script src="lib/phaser.min.js"></script> -->
+        <script src="lib/phaser.min.js"></script>
 
         <script src="lib/phaser-facebook-instant-games.min.js"></script>
 
@@ -19,26 +19,38 @@
         <link href="https://fonts.googleapis.com/css2?family=Coda:wght@800&family=Oswald:wght@700&display=swap" rel="stylesheet">
 
         <style type="text/css">
-
-            * {
-                padding: 0;
-                margin: 0;
-            }
+           
             canvas {
                /*  touch-action: none; */
                 touch-action: none;
                 -ms-touch-action: none;
             }
-            #game_div {
-                max-width: 720px;
-                max-width: 1280px;
-                width: auto;
-                width: 100%;
+            html, body {
+                height : 100vh;
+                width : 100%;
+                padding: 0;
+                margin: 0;
             }
+            #game-container {
+                /* background-color: #55ff5d; */
+                display: flex;
+                height : 100%;
+                max-height: 100%;
+                overflow: hidden;
+            }
+            #game-div {
+                max-width: 720px;
+                max-height: 1280px;
+                margin : auto;
+            }
+            
         </style>
 
     </head>
     <body>
-        <div id="game_div"></div>
+        <div id="game-container">
+            <div id="game-div"></div>
+        </div>
+        
     </body>
 </html>

@@ -1,20 +1,37 @@
 
 window.onload = function () {
 
+
     FBInstant.initializeAsync().then(function() {
-
-        let windowHeight = window.innerHeight;
-
-        
-        let _gH = windowHeight > 1280 ? 1280 : windowHeight,
-            _gW = 9/16 * _gH;
-
-        document.getElementById('game_div').style.height = _gH;
-        document.getElementById('game_div').style.width = _gW;
        
-        console.log ( windowHeight, _gH, _gW )
+        let maxW = 720;
+
+        let contW = window.innerWidth, 
+        
+            contH = window.innerHeight;
+
+        let tmpWidth = contW > maxW ? maxW : contW,
+
+            tmpHeight = Math.ceil(tmpWidth * 16/9);
+
+        if ( tmpHeight >= contH ) {
+
+            _gH = contH;
+            _gW = Math.ceil(_gH * 9/16);
+
+            //console.log ( 'game dimensions adjusted by screen height' )
+
+        }else {
+
+            _gW = tmpWidth;
+            _gH = tmpHeight;
+
+            //console.log ( 'game dimensions adjusted by screen width' )
+        }
 
         let _scale = _gW/720;
+
+        console.log ( _gH, _gW, _scale );
 
         let _bestScores = { moves: [], time : [] };
 
@@ -70,6 +87,14 @@ window.onload = function () {
 
                 this.load.image ('prompt', 'assets/images/prompt.png');
 
+                this.load.image ('leaderboard', 'assets/images/leaderboard.png');
+
+                this.load.image ('item', 'assets/images/item.png');
+
+                this.load.image ('blank_img', 'assets/images/blank_img.png');
+
+                this.load.image ('close_btn', 'assets/images/close_btn.png');
+
                 //this.load.image ('best_scores', 'assets/images/best_scores.png');
 
                 this.add.text ( _gW/2, _gH/2, '', { fontSize: 20*_scale, fontFamily:'Oswald', color:'#fff'}).setOrigin(0.5);
@@ -84,7 +109,7 @@ window.onload = function () {
             }
         
         }
-
+        
         class HomeScreen extends Phaser.Scene {
 
             constructor ()
@@ -93,7 +118,7 @@ window.onload = function () {
             }
             preload () {
 
-                this.load.image ('dude', this.facebook.playerPhotoURL );
+               
             }
             create () 
             {
@@ -109,8 +134,6 @@ window.onload = function () {
 
                 this.initHomeInterface ();
 
-                this.initTable ();
-                
                 //this.initData ();
 
                 this.initScores ();
@@ -120,13 +143,11 @@ window.onload = function () {
 
                 this.bgmusic = this.sound.add('bgsound').setVolume(0.1).setLoop(true);
                 this.bgmusic.play();
-                this.music = this.sound.addAudioSprite('sfx');
+                
+                this.music = this.sound.addAudioSprite('sfx').setVolume(0.4);
 
             }
             initHomeInterface () {
-
-
-                //set graphics..
 
                 let bg = this.add.image (_gW/2, _gH/2, 'bg').setScale (_gW/720);
 
@@ -139,10 +160,26 @@ window.onload = function () {
 
                 this.add.rectangle ( _gW/2, ry, rz, rz, 0xdedede, 1 ).setStrokeStyle ( 3, 0xf5f5f5 );
 
+                this.add.image ( _gW/2, ry, 'blank_img').setDisplaySize( rz, rz);
+
                 this.add.text (_gW/2, ry + (90*_scale), 'Welcome, ' + this.facebook.playerName + '!', { fontFamily:'Oswald', fontSize: 25*_scale, color : '#fff' }).setOrigin (0.5);
 
-                this.add.image ( _gW/2, ry, 'dude').setDisplaySize( rz, rz);
+                this.load.image ('dude', this.facebook.getPlayerPhotoURL() );
 
+                this.load.once('complete', function () {
+
+                    let img = this.add.image ( _gW/2, ry, 'dude').setDisplaySize( rz, rz ).setAlpha(0);
+
+                    this.tweens.add ({
+                        targets : img,
+                        alpha : 1,
+                        duration : 500,
+                        ease : 'Power2'
+                    });
+
+                }, this);
+                
+                this.load.start();
 
                 //click..
 
@@ -185,58 +222,14 @@ window.onload = function () {
                 })
 
                this.time.delayedCall ( delayEntry, function () {
-                    this.music.play ('move');
+                    this.music.play ('move', { volume: 0.5 });
                 },[], this  );
 
                 
                
 
 
-            }
-            initTable () {
-
-                //set table..
-                this.tableContainer = this.add.container ( 0, 550 * _scale );
-
-                let table = this.add.image (_gW/2, 932*_scale, 'table').setScale (_scale);
-
-                this.tableContainer.add ( table );
-
-                this.stats = {
-                    time : [],
-                    moves : []
-                }
-          
-                let itemW = 568 * _scale,
-                    itemH = 78 * _scale,
-                    itemX = 76 * _scale,
-                    itemY = 876 * _scale;
-
-                let txtConfiga = { color : '#333', fontSize : itemH * 0.5, fontFamily : 'Oswald'  };
-
-                for ( let i = 0; i < this.lvlCount ; i++ ) {
-
-                    let miniCont = this.add.container ( itemX, itemY + i * ( itemH ) ).setName ('item' + i );
-
-                    let bgRect = this.add.rectangle ( 0, 0, itemW, itemH).setOrigin (0); //setStrokeStyle(1, 0x0a0a0a);
-
-                    let lvl = this.add.text ( itemW * 0.11, itemH/2, (i+1) < 10 ? '0' + (i+1) : i+1, txtConfiga  ).setOrigin (0.5);
-
-                    let timetxt = this.add.text ( itemW/2, itemH/2, '000:00:00', txtConfiga ).setOrigin (0.5);
-
-                    let movestxt = this.add.text ( itemW * 0.88, itemH/2, '9999', txtConfiga ).setOrigin (0.5);
-
-                    miniCont.add ([bgRect, lvl, timetxt, movestxt]);
-
-                    this.stats.time.push ( timetxt );
-
-                    this.stats.moves.push ( movestxt );
-                    
-                    this.tableContainer.add (miniCont);
-                }
-
-
-            }
+            }  
             initData () {
                  
                 var initData = {
@@ -261,30 +254,15 @@ window.onload = function () {
             }
             initScores () {
 
-               
-               
-                
-
                 this.facebook.getData(['bestScores', 'bestTime']);
 
                 this.facebook.once('getdata', function (data) {
 
-                    console.log ( data );
+                    //console.log ( 'get data successful', data );
                    
                     this.updateStats (data);
 
-                    this.tweens.add ({
-                        targets : this.tableContainer,
-                        y : 0,
-                        duration : 300,
-                        ease : 'Power2',
-                        delay : 300
-                    });
-
-                    this.time.delayedCall (100, function () {
-                        this.music.play ('move');
-                    }, [], this );
-
+                    this.initTable ();
 
                 }, this);
 
@@ -292,19 +270,75 @@ window.onload = function () {
 
                     console.log ('error saving data : homescreen');
 
+                    this.initTable ();
+
                 });
 
+            }
+            initTable () {
+
+                //set table..550 * _scale 
+                this.tableContainer = this.add.container ( 0, 550 * _scale );
+
+
+                let table = this.add.image (_gW/2, 932*_scale, 'table').setScale (_scale);
+                
+                this.tableContainer.add ( table );
+
+                this.stats = {
+                    time : [],
+                    moves : []
+                }
+          
+                let itemW = 568 * _scale,
+                    itemH = 78 * _scale,
+                    itemX = 76 * _scale,
+                    itemY = 876 * _scale;
+
+                let txtConfiga = { color : '#333', fontSize : itemH * 0.5, fontFamily : 'Oswald'  };
+
+
+                for ( var i = 0; i < this.lvlCount; i++ ) {
+
+
+                    let miniCont = this.add.container ( itemX, itemY + i * ( itemH ) ).setName ('item' + i );
+
+                    let bgRect = this.add.rectangle ( 0, 0, itemW, itemH).setOrigin (0); //setStrokeStyle(1, 0x0a0a0a);
+
+                    let lvl = this.add.text ( itemW * 0.11, itemH/2, (i+1) < 10 ? '0' + (i+1) : i+1, txtConfiga  ).setOrigin (0.5);
+                    
+                    let timeval = this.convertToTime ( _bestScores.time[i] ); 
+
+                    let timetxt = this.add.text ( itemW * 0.48, itemH/2, timeval, txtConfiga ).setOrigin (0.5);
+
+                    let movesVal = parseInt( _bestScores.moves [i] ) <  10 ? '0' + _bestScores.moves [i] : _bestScores.moves [i];
+
+                    let movestxt = this.add.text ( itemW * 0.88, itemH/2, movesVal, txtConfiga ).setOrigin (0.5);
+
+                    miniCont.add ([bgRect, lvl, timetxt, movestxt]);
+
+                    this.tableContainer.add (miniCont);
+
+
+                }
+
+             
+                this.tweens.add ({
+                    targets : this.tableContainer,
+                    y : 0,
+                    duration : 300,
+                    ease : 'Power2',
+                });
+
+                this.music.play ('move', { volume : 0.4 });
+
+        
             }
             updateStats ( data ) {
 
                 if ( data.hasOwnProperty ('bestTime') ) {
 
                     let timeArr = data.bestTime.split(',');
-                    
-                    for ( var i=0; i<timeArr.length; i++) {
-        
-                        this.stats.time [i].setText ( this.convertToTime( timeArr[i] ) );
-                    }
 
                     _bestScores.time = timeArr;
                 }
@@ -314,19 +348,9 @@ window.onload = function () {
 
                     let movesArr = data.bestScores.split(',');
 
-                    for ( var i=0; i< movesArr.length; i++) {
-        
-                        let num = parseInt ( movesArr[i] );
-    
-                        this.stats.moves [i].setText ( num < 10 ? '0' + num : num );
-                    }
-
                     _bestScores.moves = movesArr;
             
                 }
-
-               
-               
 
             }
             convertToTime ( sec ) {
@@ -346,6 +370,8 @@ window.onload = function () {
             }
             initGame () {
                 
+                this.load.off();
+
                 this.bgmusic.stop();
                 
                 this.time.delayedCall (500, function () {
@@ -388,7 +414,10 @@ window.onload = function () {
 
                 this.initGameInterface ();
 
+                this.initLeaderBoard ();
+
                 this.initGame ();
+
 
             }
             initSound () {
@@ -406,7 +435,6 @@ window.onload = function () {
                 let bg = this.add.image (_gW/2, _gH/2, 'bg1').setScale (_gW/720);
 
                 let panel = this.add.image (_gW/2, _gH/2, 'panel').setScale (_gW/720);
-
 
                 //..
                 this.controlBtns = [];
@@ -454,7 +482,6 @@ window.onload = function () {
 
                     this.controlBtns.push ( miCont );
                 }
-
 
 
                 //...
@@ -536,6 +563,21 @@ window.onload = function () {
                 
 
 
+            }
+            initLeaderBoard () {
+
+
+                this.facebook.once ('getleaderboard', function (leaderboard)
+                {
+                    console.log ( leaderboard );
+                    
+                    this.leaderboard = leaderboard;
+
+                }, this);
+
+                this.facebook.getLeaderboard('test_leaderboard');
+
+                
             }
             showTimer () {
 
@@ -665,13 +707,15 @@ window.onload = function () {
 
                     this.score += 1;
 
-                    if ( this.score == this.scoreTotal) {
+                    //this.scoreTotal
+
+                    if ( this.score >= this.scoreTotal ) {
+
+                        this.gameTimer.destroy();
 
                         let datatopass = this.analyzeScore ();
 
                         this.showPrompt( datatopass );
-
-                        this.gameTimer.destroy();
 
                     }else {
 
@@ -909,6 +953,11 @@ window.onload = function () {
                     }
 
                     this.facebook.saveData ( topass );
+
+                    var roundData = { 'moves' : this.moves };
+
+                    this.leaderboard.setScore( this.totalSeconds, JSON.stringify(roundData) );
+
                 }
 
                 return {
@@ -916,6 +965,231 @@ window.onload = function () {
                     'prevTime' : currentBestTime,
                     'prevMove' : currentBestMove
                 }
+
+            }
+            showLeaderboard () {
+
+                this.isTopScoresLoaded = false;
+                
+                this.isPlayerScoreLoaded = false;
+
+                this.promptBg = this.add.rectangle ( 0, 0, _gW, _gH, 0x0a0a0a, 0.9 ).setOrigin (0).setInteractive ();
+
+                this.leaderboardContainer = this.add.container (-_gW, 0);
+
+                let lbFrame = this.add.image ( _gW/2, _gH/2, 'leaderboard' ).setScale ( _scale );
+
+                let configTxt = { color : '#000', fontSize : 30 * _scale, fontFamily: 'Oswald' };
+
+                let topScoretxt = this.add.text ( _gW/2, 600 * _scale, 'Loading Top Scores..', configTxt ).setOrigin (0.5).setName ('topScoreTxt');
+                
+                let plyrScoretxt = this.add.text ( _gW/2, 1062 * _scale, 'Loading Player Score..', configTxt ).setOrigin (0.5).setName ('plyrScoretxt');
+                
+                let close = this.add.image ( 615*_scale, 150*_scale, 'close_btn').setScale (_scale).setInteractive ();
+
+                close.on ( 'pointerdown', function () {
+
+                    if ( !this.isTopScoresLoaded || !this.isPlayerScoreLoaded  ) return;
+                    
+                    this.playSound ('clicka');
+
+                    this.removeLeaderBoard();
+
+                }, this);
+
+                this.leaderboardContainer.add ( [lbFrame, close, topScoretxt, plyrScoretxt] );
+                
+                let _this = this;
+
+                this.tweens.add ({
+                    targets : this.leaderboardContainer,
+                    x : 0,
+                    duration : 300,
+                    ease : 'Power2',
+                    onComplete : function () {
+                        _this.getTopScores ();
+                        _this.getPlayerScore ();
+                    }
+                })
+
+                this.playSound ('move');
+
+            }
+            removeLeaderBoard () {
+
+                let _this = this;
+
+                this.tweens.add ({
+
+                    targets : this.leaderboardContainer,
+                    x : _gW,
+                    duration : 300,
+                    easeParams : [0.5, 1],
+                    ease : 'Elastic',
+
+                    onComplete : function () {
+
+                        _this.leaderboardContainer.destroy ();
+
+                        _this.promptBg.destroy();
+
+                        if (_this.gmLvl < 3) {
+
+                            _this.gmLvl += 1;
+                            _this.changeLevel ();
+
+                        }else {
+
+                            _this.leaveGame();
+                        }
+
+                    }
+                });
+
+            }
+            showTopScores ( scoresData ) {
+
+                this.leaderboardContainer.getByName ('topScoreTxt').destroy();
+
+                if ( scoresData.length > 0 ) {
+
+                    let startX = 123 * _scale,
+                        starty = 357 * _scale;
+
+                    let itemW = 477*_scale, itemH = 120 * _scale;
+
+                    let configTxt = { color : '#000', fontFamily: 'Oswald' };
+
+                    for ( let i in scoresData ) {
+
+                        console.log ( scoresData[i] );
+
+                        let roundData = JSON.parse( scoresData[i].data );
+
+                        let miniCont = this.add.container ( startX, starty + ( i * itemH ) ).setName ( 'cont' + i );
+
+                        let img = this.add.image (0, 0, 'item').setOrigin(0).setScale (_scale);
+
+                        let photoRect = this.add.rectangle ( 0,  itemH/2, itemH *0.7, itemH *0.7, 0x3a3a3a, 1 ).setOrigin(0, 0.5);
+
+                        let playerImg = this.add.image ( 0,  itemH/2, 'blank_img' ).setDisplaySize ( itemH *0.7, itemH *0.7 ).setOrigin (0, 0.5);
+
+                        let rank = this.add.text ( itemW, itemH*0.1, '#' + scoresData[i].rank, configTxt ).setFontSize ( 26*_scale ).setOrigin( 1, 0 );
+
+                        let name = this.add.text ( itemW *0.2,  itemH *0.1, scoresData[i].playerName, configTxt ).setFontSize ( 35*_scale );
+
+                        let txt = 'Time : ' + this.convertToTime (scoresData[i].score) + '  ~ Moves  : ' + roundData.moves;
+
+                        //let txt = 'Time : ' + this.convertToTime (scoresData[i].score) + '  ~ Moves  : ' + scoresData[i].moves;
+
+                        let scoreDetails = this.add.text ( itemW *0.2, itemH*0.55, txt, { fontFamily: 'Oswald', color : '#333'} ).setFontSize ( 26*_scale );
+                        
+                        miniCont.add ( [ img, rank, photoRect, playerImg, name, scoreDetails ] );
+
+
+                        this.load.image ( 'playerPhoto' + i, scoresData[i].playerPhotoURL );
+
+                        this.leaderboardContainer.add ( miniCont );
+
+                    }   
+
+                    this.load.once('complete', function () {
+
+                        for ( let i = 0; i  < scoresData.length; i++ ) {
+
+                            var imga = this.add.image ( 0,  itemH/2, 'playerPhoto' + i ).setDisplaySize ( itemH *0.7, itemH *0.7 ).setOrigin (0, 0.5);
+
+                            this.leaderboardContainer.getByName ('cont' + i ).add ( imga );
+                        }
+                        this.isTopScoresLoaded = true;
+
+                    }, this);
+
+
+                    this.load.start();
+
+                }else {
+
+                    this.leaderboardContainer.getByName ('topScoreTxt').setText ("No data returned.");
+
+                    this.isTopScoresLoaded = true;
+
+                }
+
+            }
+            showPlayerScore ( plyrData ) {
+               
+                    if ( plyrData != null ) {
+
+                        let startX = 123 * _scale,
+                            startY = 1013 * _scale;
+
+                        let itemW = 477*_scale, itemH = 120 * _scale;
+
+                        let configTxt = { color : '#000', fontFamily: 'Oswald' };
+
+                        let roundData = JSON.parse( plyrData.data );
+
+                        let miniCont = this.add.container ( startX, startY )
+
+                        let photoRect = this.add.rectangle ( itemW *0.08,  itemH/2, itemH *0.75, itemH *0.75, 0x9e9e9e, 1 ).setOrigin(0.5);
+                        
+                        //let img = this.add.image ( itemW *0.08,  itemH/2, 'blank_img' ).setDisplaySize ( itemH *0.7, itemH *0.7 ).setOrigin (0.5);
+
+                        let rank = this.add.text ( itemW, itemH*0.1, '#' + plyrData.rank, configTxt ).setFontSize ( 26*_scale ).setOrigin( 1, 0 );
+
+                        let name = this.add.text ( itemW *0.2,  itemH *0.1, 'You', configTxt ).setFontSize ( 35*_scale );
+
+                        let txt = 'Time : ' + this.convertToTime (plyrData.score) + '  ~ Moves  : ' + roundData.moves;
+
+                        let scoreDetails = this.add.text ( itemW *0.2, itemH*0.55, txt, { fontFamily: 'Oswald', color : '#333'} ).setFontSize ( 26*_scale );
+                        
+                        let imga = this.add.image ( itemW *0.08,  itemH/2, 'dude' ).setDisplaySize ( itemH *0.7, itemH *0.7 ).setOrigin (0.5);
+
+                        miniCont.add ( [ rank, photoRect, imga, name, scoreDetails ] );
+
+                        this.leaderboardContainer.add ( miniCont );
+
+                        this.leaderboardContainer.getByName ('plyrScoretxt').destroy();
+                       
+                    }else {
+
+                        this.leaderboardContainer.getByName ('plyrScoretxt').setText ('No data returned.');
+                        
+                    }
+
+                    this.isPlayerScoreLoaded = true;
+
+            }
+            getTopScores () {
+
+                var fakeData = [
+
+                    { playerName : 'Albert', rank : 1, score : 10, data : JSON.stringify ( { moves:20} ), playerPhotoURL: 'assets/images/mock/friend1.jpg' },
+                    { playerName : 'Marlyn', rank : 2, score : 15, data : JSON.stringify ( { moves:20} ), playerPhotoURL: 'assets/images/mock/friend2.jpg'},
+                    { playerName : 'Andrew', rank : 3, score : 24, data : JSON.stringify ( { moves:20} ), playerPhotoURL: 'assets/images/mock/friend3.jpg'},
+                    { playerName : 'Alo', rank : 4, score : 35, data : JSON.stringify ( { moves:20} ), playerPhotoURL: 'assets/images/mock/friend4.jpg'},
+                    { playerName : 'Jared', rank : 5, score : 75, data : JSON.stringify ( { moves:20} ), playerPhotoURL: 'assets/images/mock/friend5.jpg'}
+                    
+                ];
+
+                this.leaderboard.once('getscores', function (scores)
+                {
+                    this.showTopScores ( scores );
+
+                }, this);
+
+                this.leaderboard.getScores(5);
+
+            }
+            getPlayerScore () {
+
+                this.leaderboard.once('getplayerscore', function ( playerScore )
+                {
+                    this.showPlayerScore ( playerScore );
+                }, this);
+
+                this.leaderboard.getPlayerScore();
 
             }
             showInitPrompt () {
@@ -1038,9 +1312,6 @@ window.onload = function () {
 
                 }
                 
-
-                
-
                 //btn..
                 let btnFrame = this.gmLvl < 3 ? 2 : 4;
 
@@ -1062,11 +1333,8 @@ window.onload = function () {
                     //this.setFrame ( this.getData('id') + 1);
                     this.scene.playSound ('clicka');
 
-                    if ( this.scene.gmLvl != 3 ) {
-                        this.scene.removePrompt ();
-                    }else {
-                        this.scene.leaveGame();
-                    }
+                    this.scene.removePrompt ();
+                    
 
                 });
 
@@ -1096,18 +1364,13 @@ window.onload = function () {
                     duration : 300,
                     easeParams : [0.5, 1],
                     ease : 'Elastic',
-
                     onComplete : function () {
 
-                        _this.promptScreen.destroy ();
                         _this.bgRect.destroy();
 
-                        if (_this.gmLvl < 3) {
-                            _this.gmLvl += 1;
-                            _this.changeLevel ();
-                        }
-
+                        _this.showLeaderboard();
                     }
+
                 });
 
             }
@@ -1280,6 +1543,7 @@ window.onload = function () {
             }
             leaveGame () {
 
+                //this.facebook.removeListener ('getleaderboard');
                 this.facebook.removeListener ('savedata');
                 this.facebook.removeListener ('savedatafail');
 
@@ -1312,7 +1576,7 @@ window.onload = function () {
                 let contimg = scene.add.image ( 0,0, 'thumbs', cnt ).setScale ( width/75 *0.9 ).setVisible ( false );
 
                 //tn < 10 ? '0'+tn : tn
-                let tileNumber = scene.add.text ( width*0.35, -height*0.4, tn, { color:'#fff', fontSize: height * 0.25, fontFamily : 'Oswald'}).setOrigin (1, 0);
+                let tileNumber = scene.add.text ( width*0.35, -height*0.4, cnt, { color:'#fff', fontSize: height * 0.25, fontFamily : 'Oswald'}).setOrigin (1, 0);
 
                 tileNumber.setShadow (0,2,'#f00', 2, false, true);
 
@@ -1336,18 +1600,17 @@ window.onload = function () {
         } 
 
         var config = {
-
             type: Phaser.AUTO,
             width: _gW,
             height: _gH,
+            parent: 'game-div',
             backgroundColor: '#f5f5f5',
-            parent:'game_div',
             scene: [ Preloader, HomeScreen, GameScreen ]
-
         };
+        
 
         new Phaser.Game(config);
 
     });
-
+   
 }
