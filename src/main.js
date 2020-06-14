@@ -294,10 +294,19 @@ window.onload = function () {
 
                 this.time.delayedCall ( delayEntry, this.playSound, ['move'], this);
 
-            }        
+            }   
+            resetData () {
+
+                let playerRecordData = {
+                    playerTime : _bestScores.time.toString(),
+                    playerMove : _bestScores.moves.toString(),
+                }
+
+                this.facebook.saveData(playerRecordData);
+            }     
             getPlayerData () {
 
-                this.facebook.getData(['bestScores', 'bestTime']);
+                this.facebook.getData(['playerTime', 'playerMove']);
 
                 this.facebook.once('getdata', function (data) {
 
@@ -393,9 +402,11 @@ window.onload = function () {
             }
             updateStats ( data ) {
 
-                if ( data.hasOwnProperty ('bestTime') ) {
+                console.log ( data );
 
-                    let timeArr = data.bestTime.split(',');
+                if ( data.hasOwnProperty ('playerTime') ) {
+
+                    let timeArr = data.playerTime.split(',');
 
                     _bestScores.time = timeArr;
 
@@ -406,9 +417,9 @@ window.onload = function () {
                     }
                 }
 
-                if ( data.hasOwnProperty ('bestScores') ) {
+                if ( data.hasOwnProperty ('playerMove') ) {
 
-                    let movesArr = data.bestScores.split(',');
+                    let movesArr = data.playerMove.split(',');
 
                     _bestScores.moves = movesArr;
             
@@ -518,8 +529,6 @@ window.onload = function () {
                 this.lvlCount = this.gmData.length;
 
                 this.initSound ();
-
-                this.initFacebookLeaderBoard ();
 
                 this.initGameInterface ();
 
@@ -664,6 +673,8 @@ window.onload = function () {
                 this.movText.text = 'Moves: 0';
                 this.timerText.text = 'Time: 00:00:00';
 
+                this.initFacebookLeaderBoard ('mtiles_'+ this.gmLvl );
+
                 this.createTiles ( r, c );
 
                 this.showInitPrompt ();
@@ -681,7 +692,7 @@ window.onload = function () {
 
 
             }
-            initFacebookLeaderBoard () {
+            initFacebookLeaderBoard ( name ) {
 
                 //this.isLeaderboardLoaded = true;
 
@@ -689,7 +700,7 @@ window.onload = function () {
 
                 this.facebook.once ('getleaderboard', function (leaderboard)
                 {
-                    //console.log ( leaderboard );
+                    console.log ( 'get leaderboard successful: ' + name  );
                     
                     this.leaderboard = leaderboard;
 
@@ -697,17 +708,17 @@ window.onload = function () {
 
                 }, this);
 
-                this.facebook.getLeaderboard('test_leaderboard');
+                this.facebook.getLeaderboard( name );
                 
-                /* 
-                this.facebook.on('savedata', function (data) {
+                
+                this.facebook.once('savedata', function (data) {
                     console.log ('save data successful : gamescreen', data );
                 });
                 
-                this.facebook.on('savedatafail', function (error) {
+                this.facebook.once('savedatafail', function (error) {
                     console.log ('error saving data : gamescreen');
                 }); 
-                */
+            
 
                 
             }
@@ -1478,6 +1489,16 @@ window.onload = function () {
 
                     _bestScores.moves [this.gmLvl - 1] = this.moves;
 
+
+                    let playerRecordData = {
+                        playerTime : _bestScores.time.toString(),
+                        playerMove : _bestScores.moves.toString(),
+                    }
+
+                    this.facebook.saveData(playerRecordData);
+
+                    this.leaderboard.setScore( this.totalSeconds, JSON.stringify( { 'moves': this.moves } ));
+
                 }
 
                 return {
@@ -1870,23 +1891,28 @@ window.onload = function () {
 
                     let x_logo = 160*_scale,  y_new = 582*_scale, y_old = 645*_scale;
 
-                    //logo..
-                    let endlogo_new = this.add.sprite ( x_logo, y_new, 'endlogo', 1 ).setScale (_scale);
-
-                    let endlogo_old = this.add.sprite ( x_logo, y_old, 'endlogo', 0 ).setScale (_scale);
-
-                    
-                    //records..
                     let xp = 215 * _scale, upr = 2 * _scale;
 
                     let txtConfigb = { color : '#fff', fontSize : 32 * _scale, fontFamily : 'Oswald' };
+
+                    //logo and records..
+                    let endlogo_new = this.add.sprite ( x_logo, y_new, 'endlogo', 1 ).setScale (_scale);
 
                     let txtvala = 'Time: '+ this.convertToTime(this.totalSeconds) + '  Moves: ' + this.convertMove ( this.moves);
 
                     let txtnew = this.add.text ( xp, y_new-upr , txtvala, txtConfigb ).setOrigin (0, 0.5);
 
-                    let txtvalb = 'Time: '+ this.convertToTime(data.prevTime) + '  Moves: ' + this.convertMove (data.prevMove);
 
+                    let endlogo_old = this.add.sprite ( x_logo, y_old, 'endlogo', 0 ).setScale (_scale);
+
+                    let txtvalb = '';
+
+                    if ( data.prevTime != 0 ) {
+                        txtvalb = 'Time: '+ this.convertToTime(data.prevTime) + '  Moves: ' + this.convertMove (data.prevMove);
+                    }else {
+                        txtvalb = 'No previous record'
+                    }
+                     
                     let txtold = this.add.text ( xp, y_old-upr, txtvalb, txtConfigb ).setOrigin (0, 0.5).setColor ('#6e6e6e');
 
                     this.promptScreen.add ([ titleTxt, endlogo_new, endlogo_old, txtnew, txtold ]);
@@ -2242,7 +2268,7 @@ window.onload = function () {
                 let contimg = scene.add.image ( 0,0, 'thumbs', cnt ).setScale ( width/75 *0.9 ).setVisible ( false );
 
                 //gp + 1
-                let tileNumber = scene.add.text ( width*0.35, -height*0.4, gp+1, { color:'#fff', fontSize: height * 0.25, fontFamily : 'Oswald'}).setOrigin (1, 0);
+                let tileNumber = scene.add.text ( width*0.35, -height*0.4, gp + 1, { color:'#fff', fontSize: height * 0.25, fontFamily : 'Oswald'}).setOrigin (1, 0);
 
                 tileNumber.setShadow (0,2,'#f00', 2, false, true);
 
